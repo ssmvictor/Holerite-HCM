@@ -153,7 +153,7 @@ class HoleriteGenerator:
                 mes_ano_formatado = str(perref) 
 
             header_data = [
-                [logo, Paragraph('EMPRESA: ONIX IND COM LOUÇAS SANITARIAS LTDA', style_header_empresa)],
+                [logo, Paragraph('EMPRESA: NOME DA EMPRESA', style_header_empresa)],
                 ['', Paragraph(f'MÊS/ANO: {mes_ano_formatado}', style_header_mes)],
                 ['', Paragraph('Página: 0001', style_header_mes)]
             ]
