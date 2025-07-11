@@ -58,6 +58,12 @@ password = 'sua_senha'          # Senha
 
 ```
 
+2. **No terminal navegue até o diretório e execute:**
+```
+python app.py
+
+```
+
 ## Estrutura da Consulta SQL
 
 O arquivo `holerite.sql` deve retornar as seguintes colunas:
