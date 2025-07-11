@@ -84,29 +84,6 @@ O arquivo `holerite.sql` deve retornar as seguintes colunas:
 - `BASEIR` - Base de cáculo imposto de renda(IRRF)
 - `faixaIR` - Porcentagem do imposto de renda(IRRF) descontado sobre a base
 
-## Personalização
-
-### Modificar Layout do PDF
-
-Edite a função `generate_pdf()` no arquivo `holerite_system.py`:
-
-```python
-# Ajustar estilos
-title_style = ParagraphStyle(
-    'CustomTitle',
-    fontSize=16,  # Tamanho da fonte do título
-    textColor=colors.darkblue  # Cor do título
-)
-
-# Ajustar margens
-doc = SimpleDocTemplate(
-    output_path,
-    rightMargin=20*mm,  # Margem direita
-    leftMargin=20*mm,   # Margem esquerda
-    topMargin=20*mm,    # Margem superior
-    bottomMargin=20*mm  # Margem inferior
-)
-```
 
 ---
 
