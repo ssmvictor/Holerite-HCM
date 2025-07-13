@@ -12,6 +12,31 @@
         <h1>Gerador de Holerite</h1>
         <form action="/generate" method="post">
             <input type="text" name="num_cad" placeholder="Digite a matrícula" required>
+            <div class="date-inputs">
+                <select name="mes" required>
+                    <option value="">Selecione o mês</option>
+                    <option value="01">Janeiro</option>
+                    <option value="02">Fevereiro</option>
+                    <option value="03">Março</option>
+                    <option value="04">Abril</option>
+                    <option value="05">Maio</option>
+                    <option value="06">Junho</option>
+                    <option value="07">Julho</option>
+                    <option value="08">Agosto</option>
+                    <option value="09">Setembro</option>
+                    <option value="10">Outubro</option>
+                    <option value="11">Novembro</option>
+                    <option value="12">Dezembro</option>
+                </select>
+                <input type="number" name="ano" placeholder="Ano (ex: 2025)" min="2020" max="2030" required>
+            </div>
+            <select name="tipo_calculo" required>
+                <option value="">Selecione o tipo de cálculo</option>
+                <option value="11">Folha</option>
+                <option value="91">Adiantamento</option>
+                <option value="31">Décimo terceiro adiantamento</option>
+                <option value="32">Décimo terceiro integral</option>
+            </select>
             <button type="submit">Gerar Holerite</button>
         </form>
     </div>

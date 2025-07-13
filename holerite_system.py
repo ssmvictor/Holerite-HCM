@@ -59,13 +59,15 @@ class HoleriteGenerator:
             self.connection.close()
             print("Conexão com Oracle encerrada.")
     
-    def execute_sql_file(self, sql_file_path, num_cad):
+    def execute_sql_file(self, sql_file_path, num_cad, per_ref, tipo_calculo):
         """
         Executa o SQL do arquivo fornecido
         
         Args:
             sql_file_path (str): Caminho para o arquivo SQL
             num_cad (str): Número de cadastro do funcionário
+            per_ref (str): Período de referência no formato 'dd/mm/yyyy'
+            tipo_calculo (str): Tipo de cálculo (11, 91, 31, 32)
             
         Returns:
             list: Lista de tuplas com os resultados da consulta
@@ -74,11 +76,18 @@ class HoleriteGenerator:
             with open(sql_file_path, 'r', encoding='utf-8') as file:
                 sql_query = file.read()
             
-            # Substitui o placeholder pelo número de cadastro real
-            sql_query = sql_query.replace('AND VRS.NUMCAD = 175', f'AND VRS.NUMCAD = {num_cad}')
-
             cursor = self.connection.cursor()
-            cursor.execute(sql_query)
+            
+            # Converte per_ref para formato de data Oracle
+            from datetime import datetime
+            per_ref_date = datetime.strptime(per_ref, '%d/%m/%Y')
+            
+            # Executa a consulta com parâmetros nomeados
+            cursor.execute(sql_query, {
+                'NUMCAD_PARAM': int(num_cad),
+                'PERREF_PARAM': per_ref_date,
+                'TIPCAL_PARAM': int(tipo_calculo)
+            })
             
             # Obtém os nomes das colunas
             columns = [desc[0] for desc in cursor.description]
@@ -153,7 +162,7 @@ class HoleriteGenerator:
                 mes_ano_formatado = str(perref) 
 
             header_data = [
-                [logo, Paragraph('EMPRESA: NOME DA EMPRESA', style_header_empresa)],
+                [logo, Paragraph(f'EMPRESA: {info.get('RAZSOC', '')}', style_header_empresa)],
                 ['', Paragraph(f'MÊS/ANO: {mes_ano_formatado}', style_header_mes)],
                 ['', Paragraph('Página: 0001', style_header_mes)]
             ]
@@ -236,7 +245,7 @@ class HoleriteGenerator:
             valor_liquido = total_vencimentos - total_descontos
             footer_data = [
                 [Paragraph('SALARIO BASE', style_footer_label), Paragraph('BASE CÁLC. FGTS', style_footer_label), Paragraph('FGTS DO MÊS', style_footer_label), '', Paragraph('TOTAL DE VENCIMENTOS', style_footer_label)],
-                [Paragraph(self.format_currency(info.get('SALBASE', 0)), style_footer_value), Paragraph(self.format_currency(info.get('BASEINSS', 0)), style_footer_value), Paragraph(self.format_currency(fgts_valor), style_footer_value), '', Paragraph(self.format_currency(total_vencimentos), style_footer_value)],
+                [Paragraph(self.format_currency(info.get('SALBASE', 0)), style_footer_value), Paragraph(self.format_currency(info.get('BASFGTS', 0)), style_footer_value), Paragraph(self.format_currency(fgts_valor), style_footer_value), '', Paragraph(self.format_currency(total_vencimentos), style_footer_value)],
                 [Paragraph('SALARIO CONTR. INSS', style_footer_label), Paragraph('BASE CÁLCULO IRRF', style_footer_label), Paragraph('FAIXA IRRF', style_footer_label), '', Paragraph('TOTAL DE DESCONTOS', style_footer_label)],
                 [Paragraph(self.format_currency(info.get('BASEINSS', 0)), style_footer_value), Paragraph(self.format_currency(info.get('BASEIR', 0)), style_footer_value), Paragraph(str(info.get('FAIXAIR', '')), style_footer_value), '', Paragraph(self.format_currency(total_descontos), style_footer_value)],
                 ['', '', '', '', Paragraph('VALOR LÍQUIDO', style_footer_label)],

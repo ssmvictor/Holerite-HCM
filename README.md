@@ -68,6 +68,7 @@ python app.py
 
 O arquivo `holerite.sql` deve retornar as seguintes colunas:
 
+- `RAZSOC` - Razão Social da empresa
 - `DATADM` - Data de admissão
 - `NUMCAD` - Número do cadastro/matrícula
 - `NOME` - Nome do funcionário
@@ -86,7 +87,8 @@ O arquivo `holerite.sql` deve retornar as seguintes colunas:
 - `LOCAL` - Local de trabalho
 - `CARGO` - Cargo do empregado
 - `SALBASE` - Salário Base
-- `BASEINSS` - Base de cáculo INSS e Base FTGS
+- `BASEINSS` - Base de cáculo INSS
+- `BASFGTS` - Base de cáculo FTGS
 - `BASEIR` - Base de cáculo imposto de renda(IRRF)
 - `faixaIR` - Porcentagem do imposto de renda(IRRF) descontado sobre a base
 
