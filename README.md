@@ -5,7 +5,6 @@ Sistema Python co interface web para conectar ao banco de dados Oracle, executar
 ## Tela do aplicativo
 ![alt text](image.png)
 
-
 ## Características
 
 - **Interface Web:** Aplicação Flask com design moderno e intuitivo para fácil geração de holerites.
