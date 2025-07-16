@@ -56,7 +56,7 @@ pip install -r requirements.txt
 
 1. **Criar campo**
 ```
-Crie o campo "USU_SENHA" no banco de dados como varchar(60) no banco de dados via CBDS
+Crie o campo "USU_SENHA" no banco de dados como varchar(60) via CBDS
 
 ```
 
