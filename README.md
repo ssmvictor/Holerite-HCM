@@ -51,16 +51,12 @@ pip install -r requirements.txt
    - Configure o arquivo .env
    - Certifique-se de que o servidor Oracle está acessível
    - Tenha as credenciais de acesso (usuário, senha, host, porta, service_name)
+   - Crie o campo "USU_SENHA" no banco de dados como varchar(60) via CBDS
+
 
 ### Como Usar
 
-1. **Criar campo**
-```
-Crie o campo "USU_SENHA" no banco de dados como varchar(60) via CBDS
-
-```
-
-2. **Edite o arquivo `.env`:**
+1. **Edite o arquivo `.env`:**
 ```
 host = seu_servidor_oracle.com  # IP ou hostname do Oracle
 port: 1521                      # Porta do Oracle
@@ -70,7 +66,7 @@ password = 'sua_senha'          # Senha
 
 ```
 
-3. **No terminal navegue até o diretório e execute:**
+2. **No terminal navegue até o diretório e execute:**
 ```
 python app.py 
 ou 
@@ -78,7 +74,7 @@ waitress-serve --host 192.168.1.20 --port 5000 app:app(para ambiente de produç�
 
 ```
 
-4. **Dicas:**
+3. **Dicas:**
 ```
 No primeiro acesso o usuário entra com o matricula, cpf e data de nascimento, será solicitado para criar uma senha. A partir do segundo acesso será permitido gerar o holerite e será usado a senha no lugar da data de nascimento
 
