@@ -18,10 +18,11 @@ Sistema Python co interface web para conectar ao banco de dados Oracle, executar
 ## Arquivos do Sistema
 
 ### Arquivos Principais
-- `app.py` - Aplicação web Flask.
+- `app.py` - Aplicação web.
 - `holerite_system.py` - Classe principal do sistema de geração de holerite.
 - `run_holerite.py` - Script de linha de comando para execução (legado).
-- `requirements.txt` - Dependências do projeto.
+- `run_holerite.py` - Script de linha de comando para execução (legado).
+- `holerite.sql` - Script sql com os dado do holerite.
 
 ### Arquivos de Entrada
 - `holerite.sql` - Consulta SQL para buscar dados do holerite
@@ -51,7 +52,7 @@ pip install -r requirements.txt
    - Configure o arquivo .env
    - Certifique-se de que o servidor Oracle está acessível
    - Tenha as credenciais de acesso (usuário, senha, host, porta, service_name)
-   - Crie o campo "USU_SENHA" no banco de dados como varchar(60) via CBDS
+   - *Crie o campo "USU_SENHA" no banco de dados como varchar(60) via CBDS*
 
 
 ### Como Usar
