@@ -36,6 +36,9 @@ Sistema Python co interface web para conectar ao banco de dados Oracle, executar
   - `reportlab` - Geração de PDF
   - `Flask` - Iterface web
   - `python-dotenv` - Leitura do arquivo .env
+  - `gunicorn` - WSGI HTTP Serve
+  - `waitress` - Executar o sistema em ambiente de produção
+  - `bcrypt` - Criptografia da senha
 
 ### Configuração do Ambiente
 
@@ -51,7 +54,13 @@ pip install -r requirements.txt
 
 ### Como Usar
 
-1. **Edite o arquivo `.env`:**
+1. **Criar campo**
+```
+Crie o campo "USU_SENHA" no banco de dados como varchar(60) no banco de dados via CBDS
+
+```
+
+2. **Edite o arquivo `.env`:**
 ```
 host = seu_servidor_oracle.com  # IP ou hostname do Oracle
 port: 1521                      # Porta do Oracle
@@ -61,13 +70,20 @@ password = 'sua_senha'          # Senha
 
 ```
 
-2. **No terminal navegue até o diretório e execute:**
+3. **No terminal navegue até o diretório e execute:**
 ```
 python app.py 
 ou 
 waitress-serve --host 192.168.1.20 --port 5000 app:app(para ambiente de produção)
 
 ```
+
+4. **Dicas:**
+```
+No primeiro acesso o usuário entra com o matricula, cpf e data de nascimento, será solicitado para criar uma senha. A partir do segundo acesso será permitido gerar o holerite e será usado a senha no lugar da data de nascimento
+
+```
+
 
 ## Estrutura da Consulta SQL
 
@@ -101,5 +117,5 @@ O arquivo `holerite.sql` deve retornar as seguintes colunas:
 
 ---
 
-**Desenvolvido com Python 3.11 e as bibliotecas Flask, oracledb, python-dotenv e reportlab.**
+**Desenvolvido com Python 3.11 e as bibliotecas Flask, oracledb, python-dotenv, reportlab, gunicorn, waitress e bcrypt.**
 
