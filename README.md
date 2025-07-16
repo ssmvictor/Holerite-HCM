@@ -52,7 +52,7 @@ pip install -r requirements.txt
    - Configure o arquivo .env
    - Certifique-se de que o servidor Oracle está acessível
    - Tenha as credenciais de acesso (usuário, senha, host, porta, service_name)
-   - *Crie o campo "USU_SENHA" no banco de dados como varchar(60) via CBDS*
+   - `Crie o campo "USU_SENHA" no banco de dados como varchar(60) via CBDS`
 
 
 ### Como Usar
