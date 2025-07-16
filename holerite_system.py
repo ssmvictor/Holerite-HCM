@@ -4,6 +4,7 @@ Sistema de Geração de Holerite
 Conecta ao banco Oracle, executa SQL e gera PDF
 """
  
+import bcrypt
 import oracledb
 from reportlab.lib.pagesizes import A4
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
@@ -58,6 +59,76 @@ class HoleriteGenerator:
         if self.connection:
             self.connection.close()
             print("Conexão com Oracle encerrada.")
+
+    def verificar_primeiro_acesso(self, num_cad):
+        try:
+            cursor = self.connection.cursor()
+            sql_query = "SELECT USU_SENHA FROM VETORH.R034FUN WHERE NUMCAD = :NUMCAD_PARAM AND NUMEMP = 11"
+            cursor.execute(sql_query, {'NUMCAD_PARAM': int(num_cad)})
+            result = cursor.fetchone()
+            cursor.close()
+            return result is None or result[0] is None
+        except Exception as e:
+            print(f"Erro ao verificar primeiro acesso: {e}")
+            return False
+
+    def validar_credenciais(self, num_cad, cpf, credential, is_first_access):
+        try:
+            cursor = self.connection.cursor()
+            if is_first_access:
+                credential_date = datetime.strptime(credential, '%d/%m/%Y')
+                sql_query = """
+                    SELECT COUNT(*)
+                    FROM VETORH.R034FUN
+                    WHERE NUMCAD = :NUMCAD_PARAM
+                      AND NUMCPF = :NUMCPF_PARAM
+                      AND DATNAS = :DATNAS_PARAM
+                """
+                params = {
+                    'NUMCAD_PARAM': int(num_cad),
+                    'NUMCPF_PARAM': int(cpf),
+                    'DATNAS_PARAM': credential_date
+                }
+                cursor.execute(sql_query, params)
+                count = cursor.fetchone()[0]
+                cursor.close()
+                return count > 0
+            else:
+                sql_query = """
+                    SELECT USU_SENHA
+                    FROM VETORH.R034FUN
+                    WHERE NUMCAD = :NUMCAD_PARAM
+                      AND NUMCPF = :NUMCPF_PARAM
+                """
+                params = {
+                    'NUMCAD_PARAM': int(num_cad),
+                    'NUMCPF_PARAM': int(cpf)
+                }
+                cursor.execute(sql_query, params)
+                result = cursor.fetchone()
+                cursor.close()
+                if result and result[0]:
+                    hashed_password = result[0].encode('utf-8')
+                    return bcrypt.checkpw(credential.encode('utf-8'), hashed_password)
+                return False
+        except Exception as e:
+            print(f"Erro ao validar credenciais: {e}")
+            return False
+
+    def atualizar_senha(self, num_cad, nova_senha):
+        try:
+            hashed_password = bcrypt.hashpw(nova_senha.encode('utf-8'), bcrypt.gensalt())
+            cursor = self.connection.cursor()
+            sql_query = "UPDATE VETORH.R034FUN SET USU_SENHA = :SENHA WHERE NUMCAD = :NUMCAD AND NUMEMP = 11"
+            cursor.execute(sql_query, {'SENHA': hashed_password.decode('utf-8'), 'NUMCAD': int(num_cad)})
+            self.connection.commit()
+            cursor.close()
+            return True, None
+        except Exception as e:
+            error_message = f"Erro ao atualizar senha: {e}"
+            print(error_message)
+            self.connection.rollback()
+            return False, error_message
     
     def execute_sql_file(self, sql_file_path, num_cad, per_ref, tipo_calculo):
         """
@@ -132,37 +203,34 @@ class HoleriteGenerator:
             eventos = func_data['eventos']
 
             # Estilos
-            style_header_empresa = ParagraphStyle('header_empresa', fontSize=9, alignment=TA_LEFT)
-            style_header_title = ParagraphStyle('header_title', fontSize=10, alignment=TA_CENTER, fontName='Helvetica-Bold')
-            style_header_mes = ParagraphStyle('header_mes', fontSize=9, alignment=TA_RIGHT)
-            style_label = ParagraphStyle('label', fontSize=6, textColor=colors.grey)
-            style_value = ParagraphStyle('value', fontSize=8, fontName='Helvetica-Bold')
-            style_table_header = ParagraphStyle('table_header', fontSize=8, fontName='Helvetica-Bold', alignment=TA_CENTER)
-            style_table_cell = ParagraphStyle('table_cell', fontSize=8, alignment=TA_LEFT)
-            style_table_cell_right = ParagraphStyle('table_cell_right', fontSize=8, alignment=TA_RIGHT)
-            style_footer_label = ParagraphStyle('footer_label', fontSize=6, textColor=colors.grey, alignment=TA_LEFT)
-            style_footer_value = ParagraphStyle('footer_value', fontSize=8, fontName='Helvetica-Bold', alignment=TA_CENTER)
-            style_message = ParagraphStyle('message', fontSize=7, alignment=TA_LEFT)
+            style_header_empresa = ParagraphStyle('header_empresa', fontSize=10, alignment=TA_LEFT)
+            style_header_title = ParagraphStyle('header_title', fontSize=12, alignment=TA_CENTER, fontName='Helvetica-Bold')
+            style_header_mes = ParagraphStyle('header_mes', fontSize=10, alignment=TA_RIGHT)
+            style_label = ParagraphStyle('label', fontSize=7, textColor=colors.grey)
+            style_value = ParagraphStyle('value', fontSize=9, fontName='Helvetica-Bold')
+            style_table_header = ParagraphStyle('table_header', fontSize=9, fontName='Helvetica-Bold', alignment=TA_CENTER)
+            style_table_cell = ParagraphStyle('table_cell', fontSize=9, alignment=TA_LEFT)
+            style_table_cell_right = ParagraphStyle('table_cell_right', fontSize=9, alignment=TA_RIGHT)
+            style_footer_label = ParagraphStyle('footer_label', fontSize=7, textColor=colors.grey, alignment=TA_LEFT)
+            style_footer_value = ParagraphStyle('footer_value', fontSize=9, fontName='Helvetica-Bold', alignment=TA_CENTER)
+            style_message = ParagraphStyle('message', fontSize=8, alignment=TA_LEFT)
+
+            # --- Funções de Formatação Segura ---
+            def format_date(d, fmt='%m/%Y'):
+                if isinstance(d, datetime):
+                    return d.strftime(fmt)
+                return str(d) if d is not None else ''
+
+            def to_str(value):
+                return str(value) if value is not None else ''
 
             # Header
-            logo_path = 'static/logo.png'  # Caminho para o arquivo de logo
+            logo_path = 'static/logo.png'
             logo = Image(logo_path, width=50*mm, height=23*mm)
-
-            perref = info.get('PERREF', '')
-            mes_ano_formatado = ''
-            if isinstance(perref, str) and len(perref) == 10 and perref[2] == '/' and perref[5] == '/':
-                # Formato: DD/MM/YY -> MM/YYYY (brasileiro)
-                dia = perref[:2]
-                mes = perref[3:5]
-                ano = '20' + perref[8:] # Assumindo que 'YY' é '25' para 2025
-                mes_ano_formatado = f"{mes}/{ano}"
-            elif isinstance(perref, datetime):
-                mes_ano_formatado = perref.strftime('%m/%Y')
-            else:
-                mes_ano_formatado = str(perref) 
+            mes_ano_formatado = format_date(info.get('PERREF'))
 
             header_data = [
-                [logo, Paragraph(f'EMPRESA: {info.get('RAZSOC', '')}', style_header_empresa)],
+                [logo, Paragraph(to_str(info.get('RAZSOC')), style_header_empresa)],
                 ['', Paragraph(f'MÊS/ANO: {mes_ano_formatado}', style_header_mes)],
                 ['', Paragraph('Página: 0001', style_header_mes)]
             ]
@@ -177,11 +245,12 @@ class HoleriteGenerator:
             story.append(Spacer(1, 2*mm))
 
             # Employee Info
+            datadm_formatada = format_date(info.get('DATADM'), fmt='%d/%m/%Y')
             employee_data = [
                 [Paragraph('CADASTRO', style_label), Paragraph('NOME', style_label), '', Paragraph('LOCAL', style_label)],
-                [Paragraph(str(info.get('NUMCAD', '')), style_value), Paragraph(info.get('NOME', ''), style_value), '', Paragraph(info.get('LOCAL', ''), style_value)],
+                [Paragraph(to_str(info.get('NUMCAD')), style_value), Paragraph(to_str(info.get('NOME')), style_value), '', Paragraph(to_str(info.get('LOCAL')), style_value)],
                 [Paragraph('DATA ADMISSÃO', style_label), Paragraph('CARGO', style_label), '', Paragraph('', style_label)],
-                [Paragraph(info.get('DATADM', '').strftime('%d/%m/%Y') if info.get('DATADM') else '', style_value), Paragraph(info.get('CARGO', ''), style_value), '', '']
+                [Paragraph(datadm_formatada, style_value), Paragraph(to_str(info.get('CARGO')), style_value), '', '']
             ]
             employee_table = Table(employee_data, colWidths=[40*mm, 90*mm, 10*mm, 50*mm])
             employee_table.setStyle(TableStyle([
@@ -221,9 +290,9 @@ class HoleriteGenerator:
                     total_descontos += abs(valor)
 
                 events_data.append([
-                    Paragraph(str(evento.get('CODEVE', '')), style_table_cell),
-                    Paragraph(evento.get('DESEVE', ''), style_table_cell),
-                    Paragraph(str(evento.get('REFERÊNCIA', '')), style_table_cell_right),
+                    Paragraph(to_str(evento.get('CODEVE')), style_table_cell),
+                    Paragraph(to_str(evento.get('DESEVE')), style_table_cell),
+                    Paragraph(to_str(evento.get('REFERÊNCIA')), style_table_cell_right),
                     Paragraph(vencimento, style_table_cell_right),
                     Paragraph(desconto, style_table_cell_right)
                 ])
@@ -243,15 +312,17 @@ class HoleriteGenerator:
                     fgts_valor = Decimal(evento.get('VLRIMP', '0'))
                     break
             valor_liquido = total_vencimentos - total_descontos
+            base_ir_valor = info.get('BASEIR', 0) or info.get('BASIRAX', 0)
+
             footer_data = [
                 [Paragraph('SALARIO BASE', style_footer_label), Paragraph('BASE CÁLC. FGTS', style_footer_label), Paragraph('FGTS DO MÊS', style_footer_label), '', Paragraph('TOTAL DE VENCIMENTOS', style_footer_label)],
-                [Paragraph(self.format_currency(info.get('SALBASE', 0)), style_footer_value), Paragraph(self.format_currency(info.get('BASFGTS', 0)), style_footer_value), Paragraph(self.format_currency(fgts_valor), style_footer_value), '', Paragraph(self.format_currency(total_vencimentos), style_footer_value)],
+                [Paragraph(self.format_currency(info.get('SALBASE')), style_footer_value), Paragraph(self.format_currency(info.get('BASFGTS')), style_footer_value), Paragraph(self.format_currency(fgts_valor), style_footer_value), '', Paragraph(self.format_currency(total_vencimentos), style_footer_value)],
                 [Paragraph('SALARIO CONTR. INSS', style_footer_label), Paragraph('BASE CÁLCULO IRRF', style_footer_label), Paragraph('FAIXA IRRF', style_footer_label), '', Paragraph('TOTAL DE DESCONTOS', style_footer_label)],
-                [Paragraph(self.format_currency(info.get('BASEINSS', 0)), style_footer_value), Paragraph(self.format_currency(info.get('BASEIR', 0)), style_footer_value), Paragraph(str(info.get('FAIXAIR', '')), style_footer_value), '', Paragraph(self.format_currency(total_descontos), style_footer_value)],
+                [Paragraph(self.format_currency(info.get('BASEINSS')), style_footer_value), Paragraph(self.format_currency(base_ir_valor), style_footer_value), Paragraph(to_str(info.get('FAIXAIR')), style_footer_value), '', Paragraph(self.format_currency(total_descontos), style_footer_value)],
                 ['', '', '', '', Paragraph('VALOR LÍQUIDO', style_footer_label)],
                 ['', '', '', '', Paragraph(self.format_currency(valor_liquido), style_footer_value)],
                 [Paragraph('BANCO DEPOSITÁRIO', style_footer_label), Paragraph('AGÊNCIA', style_footer_label), Paragraph('CONTA', style_footer_label), Paragraph('DÍGITO', style_footer_label), ''],
-                [Paragraph('Banco Itau S/A', style_value), Paragraph(str(info.get('CODAGE', '')), style_value), Paragraph(str(info.get('CONBAN', '')), style_value), Paragraph(str(info.get('DIGBAN', '')), style_value), '']
+                [Paragraph('Banco Itau S/A', style_value), Paragraph(to_str(info.get('CODAGE')), style_value), Paragraph(to_str(info.get('CONBAN')), style_value), Paragraph(to_str(info.get('DIGBAN')), style_value), '']
             ]
             footer_table = Table(footer_data, colWidths=[40*mm, 40*mm, 40*mm, 30*mm, 40*mm])
             footer_table.setStyle(TableStyle([

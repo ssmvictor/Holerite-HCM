@@ -1,6 +1,10 @@
 # Sistema de Geração de Holerite
 
-Sistema Python co interface web para conectar ao banco de dados Oracle, executar consulta SQL e gerar PDF de holerite com formatação profissional do sistema HCM da Senior Sistemas.
+Sistema Python co interface web para conectar ao banco de dados Oracle, executar consulta SQL e gerar PDF de holerite com formatação profissional do sistema HCM da Senior Sistemas. Modelo do holerite impresso se encontra no arquivo Modelo_holerite.pdf
+
+## Tela do aplicativo
+![alt text](image.png)
+
 
 ## Características
 
@@ -60,7 +64,9 @@ password = 'sua_senha'          # Senha
 
 2. **No terminal navegue até o diretório e execute:**
 ```
-python app.py
+python app.py 
+ou 
+waitress-serve --host 192.168.1.20 --port 5000 app:app(para ambiente de produção)
 
 ```
 
@@ -91,6 +97,7 @@ O arquivo `holerite.sql` deve retornar as seguintes colunas:
 - `BASFGTS` - Base de cáculo FTGS
 - `BASEIR` - Base de cáculo imposto de renda(IRRF)
 - `faixaIR` - Porcentagem do imposto de renda(IRRF) descontado sobre a base
+- `BASIRAX` - Case o campo BASEIR estiver vazio utiliza o campo BASIRAX
 
 
 ---

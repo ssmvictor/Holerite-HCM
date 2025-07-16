@@ -8,10 +8,14 @@
 </head>
 <body>
     <div class="container">
-        <img src="/static/logo.png" alt="Logo Onix" class="logo">
+        <img src="/static/logoB.png" alt="Logo" class="logo">
         <h1>Gerador de Holerite</h1>
-        <form action="/generate" method="post">
+        <form id="holerite-form">
             <input type="text" name="num_cad" placeholder="Digite a matrícula" required>
+            <input type="text" name="cpf" placeholder="Digite o CPF" required>
+            <div id="credential-container">
+                <input type="text" name="credential" placeholder="Data de Nascimento (dd/mm/yyyy)" required>
+            </div>
             <div class="date-inputs">
                 <select name="mes" required>
                     <option value="">Selecione o mês</option>
@@ -40,5 +44,200 @@
             <button type="submit">Gerar Holerite</button>
         </form>
     </div>
+
+    <!-- Modal de Senha -->
+    <div id="password-modal" class="modal" style="display:none;">
+        <div class="modal-content">
+            <span class="close-button">&times;</span>
+            <h2>Crie sua Senha</h2>
+            <form id="password-form">
+                <input type="password" name="nova_senha" placeholder="Nova Senha" required>
+                <input type="password" name="confirma_senha" placeholder="Confirmar Senha" required>
+                <button type="submit">Salvar Senha</button>
+            </form>
+            <p class="password-rules">A senha deve ter entre 6 e 12 caracteres, com pelo menos uma letra maiúscula e um número.</p>
+        </div>
+    </div>
+
+    <script src="https://unpkg.com/imask"></script>
+    <script>
+        const numCadInput = document.querySelector('input[name="num_cad"]');
+        const cpfInput = document.querySelector('input[name="cpf"]');
+        const credentialContainer = document.getElementById('credential-container');
+        const holeriteForm = document.getElementById('holerite-form');
+        const passwordModal = document.getElementById('password-modal');
+        const passwordForm = document.getElementById('password-form');
+        const closeModal = document.querySelector('.close-button');
+
+        let isFirstAccess = true;
+        let credentialMask;
+
+        // Máscaras
+        const cpfMask = IMask(cpfInput, { mask: '000.000.000-00' });
+
+        function setCredentialInput(isFirst) {
+            isFirstAccess = isFirst;
+            let inputHtml;
+            if (isFirst) {
+                inputHtml = '<input type="text" name="credential" placeholder="Data de Nascimento (dd/mm/yyyy)" required>';
+            } else {
+                inputHtml = '<input type="password" name="credential" placeholder="Senha" required>';
+            }
+            credentialContainer.innerHTML = inputHtml;
+            const credentialInput = credentialContainer.querySelector('input[name="credential"]');
+
+            if (isFirst) {
+                credentialMask = IMask(credentialInput, { mask: '00/00/0000' });
+                credentialInput.addEventListener('blur', () => {
+                    if (credentialInput.value.length === 10 && !isValidDate(credentialInput.value)) {
+                        alert('Data de nascimento inválida.');
+                        credentialInput.value = '';
+                    }
+                });
+            } else {
+                if (credentialMask) {
+                    credentialMask.destroy();
+                }
+            }
+        }
+
+        numCadInput.addEventListener('blur', async () => {
+            const numCad = numCadInput.value;
+            if (!numCad) return;
+
+            const response = await fetch('/check_first_access', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ num_cad: numCad })
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                setCredentialInput(data.is_first_access);
+            }
+        });
+
+        holeriteForm.addEventListener('submit', async function(event) {
+            event.preventDefault();
+            
+            if (!isValidCPF(cpfInput.value)) {
+                alert('CPF inválido.');
+                return;
+            }
+
+            const credentialInput = credentialContainer.querySelector('input[name="credential"]');
+            if (isFirstAccess && !isValidDate(credentialInput.value)) {
+                alert('Data de nascimento inválida.');
+                return;
+            }
+
+            const formData = new FormData(this);
+            const data = Object.fromEntries(formData.entries());
+
+            const response = await fetch('/validar', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            });
+
+            if (response.ok) {
+                if (isFirstAccess) {
+                    passwordModal.style.display = 'block';
+                } else {
+                    const blob = await response.blob();
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.style.display = 'none';
+                    a.href = url;
+                    
+                    const tipoNomes = {
+                        '11': 'folha', '91': 'adiantamento',
+                        '31': 'decimo_adiantamento', '32': 'decimo_integral'
+                    };
+                    const tipoNome = tipoNomes[data.tipo_calculo] || 'folha';
+                    a.download = `holerite_${data.num_cad}_${data.mes}_${data.ano}_${tipoNome}.pdf`;
+                    
+                    document.body.appendChild(a);
+                    a.click();
+                    window.URL.revokeObjectURL(url);
+                }
+            } else {
+                const error = await response.json();
+                alert(error.message);
+            }
+        });
+
+        passwordForm.addEventListener('submit', async function(event) {
+            event.preventDefault();
+            const novaSenha = this.elements.nova_senha.value;
+            const confirmaSenha = this.elements.confirma_senha.value;
+
+            if (novaSenha !== confirmaSenha) {
+                alert('As senhas não coincidem.');
+                return;
+            }
+
+            if (!isValidPassword(novaSenha)) {
+                alert('A senha não atende aos critérios de segurança.');
+                return;
+            }
+
+            const response = await fetch('/set_password', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ num_cad: numCadInput.value, nova_senha: novaSenha })
+            });
+
+            if (response.ok) {
+                alert('Senha definida com sucesso! Você já pode gerar seu holerite com a nova senha.');
+                passwordModal.style.display = 'none';
+                setCredentialInput(false);
+            } else {
+                const error = await response.json();
+                alert(error.message);
+            }
+        });
+
+        closeModal.addEventListener('click', () => {
+            passwordModal.style.display = 'none';
+        });
+
+        window.addEventListener('click', (event) => {
+            if (event.target == passwordModal) {
+                passwordModal.style.display = 'none';
+            }
+        });
+
+        function isValidDate(dateString) {
+            if (!/^\d{2}\/\d{2}\/\d{4}$/.test(dateString)) return false;
+            const [day, month, year] = dateString.split('/').map(Number);
+            if (year < 1900 || year > 2100) return false;
+            const date = new Date(year, month - 1, day);
+            return date.getFullYear() === year && date.getMonth() === month - 1 && date.getDate() === day;
+        }
+
+        function isValidCPF(cpf) {
+            cpf = cpf.replace(/[.\-]/g, '');
+            if (cpf.length !== 11 || /^(\d)\1{10}$/.test(cpf)) return false;
+            let sum = 0, remainder;
+            for (let i = 1; i <= 9; i++) sum += parseInt(cpf.substring(i - 1, i)) * (11 - i);
+            remainder = (sum * 10) % 11;
+            if ((remainder === 10) || (remainder === 11)) remainder = 0;
+            if (remainder !== parseInt(cpf.substring(9, 10))) return false;
+            sum = 0;
+            for (let i = 1; i <= 10; i++) sum += parseInt(cpf.substring(i - 1, i)) * (12 - i);
+            remainder = (sum * 10) % 11;
+            if ((remainder === 10) || (remainder === 11)) remainder = 0;
+            if (remainder !== parseInt(cpf.substring(10, 11))) return false;
+            return true;
+        }
+
+        function isValidPassword(password) {
+            return password.length >= 6 && password.length <= 12 && /[A-Z]/.test(password) && /\d/.test(password);
+        }
+
+        // Initialize with date input
+        setCredentialInput(true);
+    </script>
 </body>
 </html>
